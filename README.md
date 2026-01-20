@@ -16,25 +16,45 @@ Analysis Checklist
 | Alignments          | Evolutionary rate estimation | dN/dS and substitution rate tables |
 | Statistical tables  | Statistical analysis         | Final figures and tables           |
 
-Workflow Overview
-1. Plastome annotation and ORF curation
+Plastome Annotation and ORF Curation
 
-Plastome assemblies were annotated using Geneious Prime v2023.0.1 with the Live Annotation and Predict module (similarity threshold = 60%).
+Plastome assemblies were initially annotated using Geneious Prime v.2023.0.1 with the Live Annotation & Predict module.
 
-ORFs were aligned to tobacco CDS using Biopython PairwiseAligner:
+Parameters:
+
+Reference plastomes: tobacco plastome and publicly available plastomes of Ericales
+
+Similarity threshold: 60%
+
+Protein-coding ORFs were manually curated using CDS sequences from obligate autotrophic plants as references.
+
+Each annotated ORF was aligned to the tobacco CDS using Bio.Align.PairwiseAligner (Python):
+
+Alignment settings:
+
 Global alignment mode
+
 Match score = 1
+
 Mismatch score = −1
+
 Gap open penalty = −5
+
 Gap extend penalty = −1
 
-Coverage criteria:
-Coverage > 70%: predicted as intact genes
-Coverage < 70%: predicted as pseudogenes or missing
+Coverage was calculated as:
 
-If any ndh gene was pseudogenized or lost, all ndh genes were annotated as functionally lost.
+Covered aligned positions / tobacco CDS length
 
-Script: scripts/annotation/orf_alignment.py
+Classification criteria:
+
+ORFs with coverage >70% → predicted as intact genes
+
+ORFs with coverage <70% → predicted as pseudogenes or missing
+
+NDH gene prior assumption
+
+Based on functional dependency of the NDH complex, once any ndh gene was annotated as a pseudogene or lost, all remaining ndh genes were annotated as functionally lost, even if their ORFs appeared conserved.
 
 2. tRNA annotation
 
