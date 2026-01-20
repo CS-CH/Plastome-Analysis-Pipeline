@@ -22,21 +22,14 @@ Workflow Overview
 Plastome assemblies were annotated using Geneious Prime v2023.0.1 with the Live Annotation and Predict module (similarity threshold = 60%).
 
 ORFs were aligned to tobacco CDS using Biopython PairwiseAligner:
-
 Global alignment mode
-
 Match score = 1
-
 Mismatch score = −1
-
 Gap open penalty = −5
-
 Gap extend penalty = −1
 
 Coverage criteria:
-
 Coverage > 70%: predicted as intact genes
-
 Coverage < 70%: predicted as pseudogenes or missing
 
 If any ndh gene was pseudogenized or lost, all ndh genes were annotated as functionally lost.
