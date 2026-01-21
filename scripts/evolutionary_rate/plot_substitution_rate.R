@@ -8,7 +8,7 @@
 # - Required columns: groups, subgroups, value
 #   - groups: categorical grouping, e.g., heterotrophic ("B") vs autotrophic ("A")
 #   - subgroups: gene or intron name
-#   - value: substitution rate (dN, dS) or base substitution rate (e.g., 2base.t)
+#   - value: substitution rate (dN, dS, d)
 # - Only one type of rate per input file
 
 library(dplyr)
