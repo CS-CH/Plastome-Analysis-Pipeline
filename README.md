@@ -1,131 +1,137 @@
-Plastome Analysis Pipeline
-
 A fully reproducible pipeline for plastome annotation, transcriptome validation, repeat and mismatch region analysis, and evolutionary rate estimation.
 
-Analysis Checklist
-| Input               | Step                         | Output                             |
-| ------------------- | ---------------------------- | ---------------------------------- |
-| Plastome assemblies | Annotation and ORF curation  | Annotated plastome files           |
-| Plastome assemblies | tRNA annotation              | tRNA annotation tables             |
-| RNA-seq reads       | Quality control and mapping  | BAM files                          |
-| BAM files           | Expression quantification    | FPKM matrices                      |
-| BAM files           | RNA editing detection        | RNA editing site tables            |
-| Plastome assemblies | Repeat detection             | Short repeat BED files             |
-| Plastome assemblies | Mismatch region detection    | Mismatch BED files                 |
-| CDS sequences       | Alignment and filtering      | Codon alignments                   |
-| Alignments          | Evolutionary rate estimation | dN/dS and substitution rate tables |
-| Statistical tables  | Statistical analysis         | Final figures and tables           |
+1. Read Quality Control and Trimming
 
-1. Plastome annotation and ORF curation
+Genome reads: fastp v0.23.1
 
-Initial annotation was performed in Geneious Prime v2023.0.1 using the Live Annotation & Predict module with a similarity threshold of 60%.
+Parameters: -l 50, --qualified_quality_phred 20, --n_base_limit 5, --unqualified_percent_limit 40, --trim_poly_g, --trim_poly_x
 
-ORFs were aligned to tobacco CDS using Biopython PairwiseAligner:
+Script: scripts/genome_assembly/qc_fastp.sh
 
-Global alignment
+RNA-seq reads: Trim Galore v0.6.8
 
-Match = 1, mismatch = −1
+Parameters: minimum Phred score = 20, minimum read length = 50, adapter stringency = 3
 
-Gap open = −5, gap extend = −1
+Script: scripts/transcriptome/qc_trimgalore.sh
 
-Coverage >70% → predicted as intact genes
-Coverage <70% → predicted as pseudogenes or missing
+2. Plastome Assembly
 
-If any ndh gene was pseudogenized or lost, all ndh genes were annotated as functionally lost.
+Tool: NOVOPlasty v4.3.1
 
-Scripts:
-scripts/annotation/orf_alignment.py
+Chloroplast-type configuration, seed sequence required
 
-2. tRNA annotation
+Script: scripts/genome_assembly/assembly_novoplasty.sh
 
-tRNAscan-SE v2.0 was used with default parameters.
+3. Read Mapping and IR/SC Verification
+
+Tool: Bowtie2 v2.3.5
+
+Script: scripts/genome_assembly/mapping_bowtie2.sh
+
+Manual verification of inverted repeat (IR) and single-copy (SC) region boundaries
+
+4. Genome Annotation
+
+Geneious Prime v2023.0.1 for initial annotation
+
+Reference: model plants and closely related plastomes, similarity 60%
+
+Manual curation of ORFs using model plant CDS as reference
+
+Protein-coding ORFs: aligned to model plant CDS using Bio.Align.PairwiseAligner
+
+Coverage >70% → intact genes
+
+Coverage <70% → pseudogenes/missing
+
+Special ndh rule: if any ndh gene pseudogenized or lost, all ndh genes considered functionally lost
+
+tRNA annotation: tRNAscan-SE v2.0
+
+Parameters: organelle mode (-O), intron detection (-I)
 
 Script: scripts/annotation/trna_scan.sh
 
-3. RNA-seq processing
+ORF alignment: scripts/annotation/orf_alignment.py
 
-Quality control:
+5. Transcriptome Analysis
 
-trim_galore *.fastq.gz
+RNA-seq reads mapped to corresponding plastomes using TOPHAT2
 
+Parameters: --library-type fr-firststrand --read-mismatches 4 --read-gap-length 0 --read-edit-dist 4 --max-insertion-length 0 --max-deletion-length 0 --coverage-search
 
-Read mapping:
+Read counts for designated regions obtained with Geneious Prime
 
-tophat2 --library-type fr-firststrand \
-        --read-mismatches 4 \
-        --read-gap-length 0 \
-        --read-edit-dist 4 \
-        --max-insertion-length 0 \
-        --max-deletion-length 0 \
-        --coverage-search
+FPKM calculation: scripts/transcriptome/fpkm_calculation.py
 
+Differential gene expression: DESeq2 v3.22 (scripts/transcriptome/dge_deseq2.R)
 
-Expression quantification was performed using custom Python scripts.
+RNA editing sites on protein-coding transcripts identified using Geneious Prime with thresholds:
 
-Script: scripts/transcriptome/fpkm_calculation.py
+minimum coverage = 60
 
-4. Differential expression analysis
+minimum variant frequency = 10%
 
-DESeq2 v3.22 was used for differential expression analysis.
+maximum variant P-value = 10^-6
 
-Genes with −log10(padj) > 1 were considered significant.
+strand-bias P-value threshold = 10^-5 for >65% bias
 
-Script: scripts/transcriptome/deseq2_analysis.R
+CDS alignment, cleaning, and phylogenetic analysis performed using PhyloSuite v1.2.3 (packaged workflow):
 
-5. RNA editing detection
+Alignment: MAFFT v7.511 (Codon mode)
 
-RNA editing sites were detected in Geneious Prime using the following parameters:
+Alignment optimization: MACSE v2.06
 
-Parameter	Value
-Minimum coverage	60
-Minimum variant frequency	10%
-Maximum variant P-value	1e−6
-Strand-bias P-value	1e−5
-6. Repeat and mismatch region analysis
+Cleaning: Gblocks v0.91b (min block length = 5, max contiguous nonconserved = 8, no gaps)
 
-Short repeats were detected using BLASTN (word size = 7) and filtered using bedtools.
+Phylogeny: IQ-TREE v2.0.7 (ModelFinder, BIC)
 
-Genome alignment visualization was performed using Mauve.
+6. Indel Analysis
 
-Mismatch regions were extracted using bedtools complement and searched against the NCBI nt database using BLASTN.
+BLASTN searches and indel detection
 
-Scripts are provided in scripts/repeats/.
+Scripts:
 
-7. Evolutionary rate estimation
+scripts/indel/Indel_blastn_matches.sh
 
-CDS alignments were generated using MAFFT, MACSE, and Gblocks.
+scripts/indel/calc_indel_gene.py
 
-Model selection was performed using IQ-TREE ModelFinder with BIC criterion.
+scripts/indel/extract_indels.py
 
-Branch length optimization was conducted in HyPhy.
+7. Genome Repeat and Mismatch Region Analysis
 
-Selection pressure and substitution rate analyses were performed using PAML (CODEML and BASEML).
+BLASTN self-alignment of plastomes (word size = 7)
 
-Scripts are provided in scripts/evolution/.
+Repeat filtering and merging: Bedtools v2.30.0
 
-8. Statistical analysis
+Genome alignment visualization: Mauve v2.4.0
 
-All statistical analyses were conducted in R.
+Scripts:
 
-Methods used include:
+scripts/repeat/repeat_blastn_analysis.py
 
-Mann–Whitney test
+scripts/repeat/gene_intergenic_gc.py
 
-One-way ANOVA with LSD post hoc test
+scripts/repeat/repeat_gene_intergenic_gc.py
 
-Shapiro–Wilk test
+8. Evolutionary Rate and Selection Analysis
 
-Levene’s test
+CDS alignment: MAFFT v7.511 (Codon mode) → MACSE v2.06 → Gblocks v0.91b
 
-Pearson and Spearman correlation analyses
+Gblocks parameters: min block length = 5, max contiguous nonconserved = 8, no gaps
 
-Script: scripts/statistics/statistics.R
+Phylogeny: PhyloSuite v1.2.3 → IQ-TREE v2.0.7 (ModelFinder, BIC)
 
-Reproducibility
+Branch length estimation: HyPhy v2.2.4 (MG94×GTR)
 
-All scripts and notebooks in this repository are sufficient to reproduce all figures and tables from raw input data.
-Each script is documented and parameterized to match the methods described in the manuscript.
+Selection pressure: CODEML (PAML v4.10.7)
 
-Citation
+Null model H0 vs alternative HA
 
-If you use this pipeline, please cite the corresponding publication.
+Likelihood ratio test: LMAP v1.0.2
+
+Base substitution rates:
+
+CDS: CODEML (runmode=pairwise, codonFreq=F3×4)
+
+Non-CDS: BASEML (tree + HKY85)
