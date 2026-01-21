@@ -1,14 +1,15 @@
 #!/usr/bin/env Rscript
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------
-# Plot substitution rates (dN or dS) for plastid genes
+# Plot substitution rates or base substitution rates for plastid genes
 #
 # Input:
-# - A long-format table (processed from PAML 2ML.dN or 2ML.dS)
+# - A long-format table (processed from PAML 2ML.dN, 2ML.dS, or 2-base substitution output)
 # - Required columns: groups, subgroups, value
 #   - groups: categorical grouping, e.g., heterotrophic ("B") vs autotrophic ("A")
 #   - subgroups: gene or intron name
-#   - value: substitution rate (dN or dS)
+#   - value: substitution rate (dN, dS) or base substitution rate (e.g., 2base.t)
+# - Only one type of rate per input file
 
 library(dplyr)
 library(ggplot2)
