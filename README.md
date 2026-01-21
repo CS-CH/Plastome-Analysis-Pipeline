@@ -1,24 +1,22 @@
+Plastome Analysis Pipeline
+
 A fully reproducible pipeline for plastome annotation, transcriptome validation, repeat and mismatch region analysis, and evolutionary rate estimation.
 
 1. Read Quality Control and Trimming
 
 Genome reads: fastp v0.23.1
-
 Parameters: -l 50, --qualified_quality_phred 20, --n_base_limit 5, --unqualified_percent_limit 40, --trim_poly_g, --trim_poly_x
-
 Script: scripts/genome_assembly/qc_fastp.sh
 
 RNA-seq reads: Trim Galore v0.6.8
-
 Parameters: minimum Phred score = 20, minimum read length = 50, adapter stringency = 3
-
 Script: scripts/transcriptome/qc_trimgalore.sh
 
 2. Plastome Assembly
 
 Tool: NOVOPlasty v4.3.1
 
-Chloroplast-type configuration, seed sequence required
+Chloroplast-type configuration with seed sequence
 
 Script: scripts/genome_assembly/assembly_novoplasty.sh
 
@@ -32,53 +30,40 @@ Manual verification of inverted repeat (IR) and single-copy (SC) region boundari
 
 4. Genome Annotation
 
-Geneious Prime v2023.0.1 for initial annotation
+Initial annotation: Geneious Prime v2023.0.1
 
-Reference: model plants and closely related plastomes, similarity 60%
+Reference: model plants and closely related plastomes (≥60% similarity)
 
-Manual curation of ORFs using model plant CDS as reference
+ORFs manually curated using model plant CDS as reference:
 
-Protein-coding ORFs: aligned to model plant CDS using Bio.Align.PairwiseAligner
+Coverage ≥70% → predicted as intact genes
 
-Coverage ≥70% → intact genes
+Coverage <70% → predicted as pseudogenes/missing
 
-Coverage <70% → pseudogenes/missing
+NDH genes special rule: if any NDH gene is pseudogenized or lost, all NDH genes are considered functionally lost
 
-Special ndh rule: if any ndh gene pseudogenized or lost, all ndh genes considered functionally lost
-
-tRNA annotation: tRNAscan-SE v2.0
-
-Parameters: organelle mode (-O), intron detection (-I)
-
+tRNA annotation: tRNAscan-SE v2.0 (organelle mode -O, intron detection -I)
 Script: scripts/annotation/trna_scan.sh
 
 ORF alignment: scripts/annotation/orf_alignment.py
 
 5. Transcriptome Analysis
 
-RNA-seq reads mapped to corresponding plastomes using TOPHAT2
+RNA-seq reads mapped to plastomes using TOPHAT2
+Parameters: --library-type fr-firststrand, --read-mismatches 4, --read-gap-length 0, --read-edit-dist 4, --max-insertion-length 0, --max-deletion-length 0, --coverage-search
 
-Parameters: --library-type fr-firststrand --read-mismatches 4 --read-gap-length 0 --read-edit-dist 4 --max-insertion-length 0 --max-deletion-length 0 --coverage-search
-
-Read counts for designated regions obtained with Geneious Prime
+Read counts obtained with Geneious Prime
 
 FPKM calculation: scripts/transcriptome/fpkm_calculation.py
 
-Differential gene expression: DESeq2 v3.22 (scripts/transcriptome/dge_deseq2.R)
+Differential expression: DESeq2 v3.22 (scripts/transcriptome/dge_deseq2.R)
 
-RNA editing sites on protein-coding transcripts identified using Geneious Prime with thresholds:
+RNA editing sites detected in protein-coding transcripts using Geneious Prime
+Thresholds: minimum coverage 60, minimum variant frequency 10%, maximum variant P-value 10^-6, strand-bias P-value threshold 10^-5 for >65% bias
 
-minimum coverage = 60
+CDS alignment and phylogeny (PhyloSuite v1.2.3 workflow):
 
-minimum variant frequency = 10%
-
-maximum variant P-value = 10^-6
-
-strand-bias P-value threshold = 10^-5 for >65% bias
-
-CDS alignment, cleaning, and phylogenetic analysis performed using PhyloSuite v1.2.3 (packaged workflow):
-
-Alignment: MAFFT v7.511 (Codon mode)
+Alignment: MAFFT v7.511 (codon mode)
 
 Alignment optimization: MACSE v2.06
 
@@ -116,22 +101,30 @@ scripts/repeat/repeat_gene_intergenic_gc.py
 
 8. Evolutionary Rate and Selection Analysis
 
-CDS alignment: MAFFT v7.511 (Codon mode) → MACSE v2.06 → Gblocks v0.91b
+CDS regions:
+
+Alignment: MAFFT v7.511 (codon mode) → MACSE v2.06 → Gblocks v0.91b
 
 Gblocks parameters: min block length = 5, max contiguous nonconserved = 8, no gaps
 
-Phylogeny: PhyloSuite v1.2.3 → IQ-TREE v2.0.7 (ModelFinder, BIC)
+Phylogeny reconstruction: PhyloSuite v1.2.3 → IQ-TREE v2.0.7 (ModelFinder, BIC)
 
-Branch length estimation: HyPhy v2.2.4 (MG94×GTR)
+Branch length estimation: HyPhy v2.2.4 (MG94×GTR model)
 
-Selection pressure: CODEML (PAML v4.10.7)
-
-Null model H0 vs alternative HA
+Selection analysis: CODEML (PAML v4.10.7) with null model H0 vs alternative HA
 
 Likelihood ratio test: LMAP v1.0.2
 
-Base substitution rates:
+Substitution rate extraction and processing:
 
-CDS: CODEML (runmode=pairwise, codonFreq=F3×4)
+CDS: CODEML (pairwise mode, codonFreq = F3×4) → dN and dS
 
-Non-CDS: BASEML (tree + HKY85)
+Non-CDS: BASEML (model = HKY85, using the phylogenetic tree) → base substitution rates
+
+Pairwise matrices processed by Python script process_substitution.py → long-format table (groups, subgroups, value)
+
+Only one substitution rate type is processed per run (dN, dS, or base substitution rate)
+
+Visualization and statistical testing:
+
+Long-format table plotted with R script plot_substitution_rate.R → boxplots, individual points, pairwise Wilcoxon tests per gene/subgroup
