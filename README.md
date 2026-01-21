@@ -40,7 +40,7 @@ Manual curation of ORFs using model plant CDS as reference
 
 Protein-coding ORFs: aligned to model plant CDS using Bio.Align.PairwiseAligner
 
-Coverage >70% → intact genes
+Coverage ≥70% → intact genes
 
 Coverage <70% → pseudogenes/missing
 
