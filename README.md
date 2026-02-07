@@ -174,10 +174,10 @@ CDS: CODEML (pairwise mode, codonFreq = F3×4) → dN and dS
 
 Non-CDS: BASEML (model = HKY85, using the phylogenetic tree) → base substitution rates
 
-Pairwise matrices processed by Python script process_substitution.py → long-format table (groups, subgroups, value)
+Pairwise matrices processed by Python script scripts/evolutionary_rate/process_substitution.py → long-format table (groups, subgroups, value)
 
 Only one substitution rate type is processed per run (dN, dS, or base substitution rate)
 
 Visualization and statistical testing:
 
-Long-format table plotted with R script plot_substitution_rate.R → boxplots, individual points, pairwise Wilcoxon tests per gene/subgroup
+Long-format table plotted with R script scripts/evolutionary_rate/plot_substitution_rate.R → boxplots, individual points, pairwise Wilcoxon tests per gene/subgroup
