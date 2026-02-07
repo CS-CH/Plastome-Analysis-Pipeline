@@ -12,6 +12,7 @@ RNA-seq reads: Trim Galore v0.6.8
 Parameters: minimum Phred score = 20, minimum read length = 50, adapter stringency = 3
 Script: scripts/transcriptome/qc_trimgalore.sh
 
+
 2. Plastome Assembly
 
 Tool: NOVOPlasty v4.3.1
@@ -20,6 +21,7 @@ Chloroplast-type configuration with seed sequence
 
 Script: scripts/genome_assembly/assembly_novoplasty.sh
 
+
 3. Read Mapping and IR/SC Verification
 
 Tool: Bowtie2 v2.3.5
@@ -27,6 +29,7 @@ Tool: Bowtie2 v2.3.5
 Script: scripts/genome_assembly/mapping_bowtie2.sh
 
 Manual verification of inverted repeat (IR) and single-copy (SC) region boundaries
+
 
 4. Genome Annotation
 
@@ -46,6 +49,7 @@ tRNA annotation: tRNAscan-SE v2.0 (organelle mode -O, intron detection -I)
 Script: scripts/annotation/trna_scan.sh
 
 ORF alignment: scripts/annotation/orf_alignment.py
+
 
 5. Transcriptome Analysis
 
@@ -71,6 +75,7 @@ Cleaning: Gblocks v0.91b (min block length = 5, max contiguous nonconserved = 8,
 
 Phylogeny: IQ-TREE v2.0.7 (ModelFinder, BIC)
 
+
 6. Indel Analysis
 
 BLASTN searches and indel detection
@@ -82,6 +87,7 @@ scripts/indel/Indel_blastn_matches.sh
 scripts/indel/calc_indel_gene.py
 
 scripts/indel/extract_indels.py
+
 
 7. Genome Repeat and Mismatch Region Analysis
 
@@ -99,6 +105,7 @@ scripts/repeat/gene_intergenic_gc.py
 
 scripts/repeat/repeat_gene_intergenic_gc.py
 
+
 8. Evolutionary Rate and Selection Analysis
 
 CDS regions:
@@ -111,9 +118,55 @@ Phylogeny reconstruction: PhyloSuite v1.2.3 → IQ-TREE v2.0.7 (ModelFinder, BIC
 
 Branch length estimation: HyPhy v2.2.4 (MG94×GTR model)
 
-Selection analysis: CODEML (PAML v4.10.7) with null model H0 vs alternative HA
 
-Likelihood ratio test: LMAP v1.0.2
+Selection Analysis (Branch and Branch-site Models)
+
+Selection analyses were conducted using codon-based maximum likelihood models implemented in CODEML (PAML v4.10.7) and interfaced through ETE3.
+
+Model execution
+
+Codon alignments were analyzed gene-by-gene using a fixed species tree in Newick format. Predefined foreground branches were specified a priori based on biological hypotheses.
+
+Branch-site models were applied to detect episodic positive selection acting on specific sites along foreground branches, including:
+
+bsA1 (null model, ω fixed at 1 for foreground sites)
+
+bsA (alternative model allowing ω > 1 on foreground sites)
+
+Scripts:
+
+scripts/selection/ete3_paml_branchsite_batch.py
+This script iterates over codon alignments, links each alignment to the species tree, marks predefined foreground branches, and runs branch-site models (bsA and bsA1) using ETE3. Model outputs are organized into gene-specific directories.
+
+Likelihood ratio tests and summary statistics
+
+Model fit was evaluated using likelihood ratio tests (LRTs) comparing nested models (e.g., bsA vs. bsA1). Test statistics were calculated as
+
+2ΔlnL = 2(lnL_HA − lnL_H0)
+
+and evaluated against a chi-square distribution with degrees of freedom determined by the difference in the number of free parameters.
+
+Scripts:
+
+scripts/selection/paml_branch_branchsite_LRT_summary.py
+This script parses CODEML output files to extract log-likelihood values (lnL), number of parameters (np), and ω (dN/dS) estimates, performs LRTs, and summarizes results across genes.
+
+Inference of selective regimes
+
+For branch models, shifts in selective constraint were inferred based on comparisons between foreground and background ω values:
+
+Relaxed constraint: significantly higher ω on the foreground branch
+
+Strengthened constraint: significantly lower ω on the foreground branch
+
+For branch-site models, genes with a significant bsA vs. bsA1 LRT (P < 0.05) were considered candidates for episodic positive selection.
+
+Identification of positively selected sites
+
+For genes showing significant evidence of branch-site positive selection, Bayes Empirical Bayes (BEB) analysis was used to identify sites under selection. Sites with posterior probability ≥ 0.95 were retained. The number and proportion of BEB sites were calculated relative to protein length.
+
+Abnormally large or boundary ω estimates (e.g., ω = 0.001 or 999) were flagged for caution during downstream interpretation.
+
 
 Substitution rate extraction and processing:
 
